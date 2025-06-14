@@ -1,0 +1,49 @@
+name: "cars-api"
+
+services:
+  cars-api-db:
+    image: postgres:latest
+    container_name: cars-api-db
+    hostname: db
+    profiles: [ "local-environment", "dev-backend-container" ]
+    restart: "unless-stopped"
+    ports:
+      - "5440:5432"
+    volumes:
+      - ./data/pg:/var/lib/postgresql/data/pgdata
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=changethis
+      - POSTGRES_DB=app
+      - PGDATA=/var/lib/postgresql/data/pgdata
+
+  cars-api-redis:
+    image: redis:alpine
+    container_name: cars-api-redis
+    hostname: redis
+    profiles: [ "local-environment", "dev-backend-container" ]
+    restart: "unless-stopped"
+    command: "redis-server --appendonly yes --port 6480"
+    ports:
+      - "6485:6480"
+    volumes:
+      - ./data/redis:/data
+  
+  cars-api-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cars-api-backend
+    hostname: cars-api-backend
+    profiles: [ "dev-backend-container" ]
+    restart: "unless-stopped"
+    ports:
+      - "8088:8000"
+    depends_on:
+      - cars-api-db
+    volumes:
+      - ./app:/app/app
+      - ./alembic:/app/alembic
+      - ./poetry.lock:/app/poetry.lock
+      - ./pyproject.toml:/app/pyproject.toml
+  

@@ -1,0 +1,42 @@
+app:
+  project_name: Cars
+  domain: /domain
+  version: /api/v1
+  debug: True
+  allow_origins: ["*"]
+
+uvicorn:
+  host: 127.0.0.1
+  port: 8000
+
+db:
+  driver: asyncpg
+  type: postgresql
+  host: 127.0.0.1
+  port: 5440
+  user: postgres
+  password: changethis
+  name: app
+  pool_size: 500
+  max_overflow: 50
+
+jwt:
+  secret_key: DNhjxI6PnbUumgWBIdSrvAutME3TKV9BmyOuv1u-GPhetL_OEyLYzkW-bwS-RJQrjPsMo9s8TO2XLeJ22Ds46w
+  algorithm: HS256
+  access_token_ttl: 1800
+  refresh_token_ttl: 2592000
+  email_token_ttl: 86400
+  invite_token_ttl: 86400
+
+smtp:
+  tls: True
+  host: smtp.gmail.com
+  port: 587
+  user: vasilsemen04@gmail.com
+  password: ukrk rieh ceqv dljs
+
+redis:
+  name: redis
+  host: 127.0.0.1
+  port: 6485
+  cache_ttl: 60
