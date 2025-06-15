@@ -38,7 +38,7 @@ services:
     profiles: [ "dev-backend-container" ]
     restart: "unless-stopped"
     ports:
-      - "8088:8000"
+      - "8088:8088"
     depends_on:
       - cars-api-db
     volumes:
@@ -46,4 +46,18 @@ services:
       - ./alembic:/app/alembic
       - ./poetry.lock:/app/poetry.lock
       - ./pyproject.toml:/app/pyproject.toml
+      - ./dev.yaml:/app/dev.yaml
+      - ./prod.yaml:/app/prod.yaml
   
+  cars-api-nginx:
+    image: nginx:latest
+    container_name: cars-api-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - cars-api-backend
+    networks:
+      - default

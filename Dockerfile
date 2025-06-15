@@ -7,10 +7,12 @@ WORKDIR /app
 COPY ./app ./app
 COPY ./alembic ./alembic
 COPY ./alembic.ini  ./
-COPY ./config.yaml ./
+COPY ./dev.yaml ./
+COPY ./logger.yaml ./
 COPY ./path.py ./
 COPY ./pyproject.toml ./
 COPY ./poetry.lock*  ./
+COPY ./start-dev.sh ./
 
 EXPOSE 80
 
@@ -24,6 +26,6 @@ SHELL ["/bin/bash", "-c"]
 
 RUN source "$VENV_PATH/bin/activate" && pip install poetry
 RUN source "$VENV_PATH/bin/activate" && poetry config virtualenvs.create false
-RUN source "$VENV_PATH/bin/activate" && poetry install --no-root --without dev
+RUN source "$VENV_PATH/bin/activate" && poetry install --no-root
 
-CMD ["bash", "./start-prod.sh"]
+CMD ["bash", "./start-dev.sh"]

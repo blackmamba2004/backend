@@ -1,0 +1,4 @@
+data/pg
+data/redis
+__pycache__
+*.pyc

@@ -259,8 +259,6 @@ class AuthService:
 
         if not user:
             raise TokenOwnerNotFoundException("Token owner is not found")
-        
-        await self._redis_cache.delete(key_tuple=(user.id))
 
         expired = from_unix_timestamp(payload["exp"]) - now()
         
@@ -345,7 +343,7 @@ class AuthService:
 
         jti = payload.get("jti")
         if jti:
-            data = await self._redis_cache.get(key_tuple=(jti,))
+            data = await self._redis_cache.get(key_tuple=(jti))
             if data is not None and data.get("revoked"):
                 raise TokenRevokedException("Token revoked")
         

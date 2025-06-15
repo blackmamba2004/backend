@@ -1,6 +1,14 @@
-linux-build-dev:
+local-build:
 	docker compose --profile local-environment up --build
 
-linux-up-dev:
+local-up:
 	docker compose --profile local-environment up
-#	python3.12 app/main-dev.py
+
+build-dev:
+	docker compose -f docker-compose.dev.yaml --profile dev-backend-container build
+
+up-dev:
+	docker compose -f docker-compose.dev.yaml --profile dev-backend-container up
+
+down-dev:
+	docker compose -f docker-compose.dev.yaml --profile dev-backend-container down
