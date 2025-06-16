@@ -3,7 +3,7 @@ app:
   domain: /domain
   version: /api/v1
   debug: False
-  allow_origins: ["*"]
+  allow_origins: ["http://localhost:5173"]
 
 uvicorn:
   host: 0.0.0.0
