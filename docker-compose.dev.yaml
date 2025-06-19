@@ -43,14 +43,14 @@ services:
     volumes:
       - ./app:/app/app
       - ./alembic:/app/alembic
+      - ./config:/app/config
       - ./poetry.lock:/app/poetry.lock
       - ./pyproject.toml:/app/pyproject.toml
-      - ./dev.yaml:/app/dev.yaml
-      - ./prod.yaml:/app/prod.yaml
   
   cars-api-nginx:
     image: nginx:latest
     container_name: cars-api-nginx
+    profiles: [ "dev-backend-container" ]
     restart: unless-stopped
     ports:
       - "80:80"

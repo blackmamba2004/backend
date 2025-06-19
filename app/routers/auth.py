@@ -14,14 +14,13 @@ from app.routers.tags import (
 from app.service import AuthService
 from app.schemas.requests import (
     RegisterBrokerRequest, 
-    LoginBrokerRequest, 
+    LoginRequest, 
     LogoutRequest,
     EmailTokenRequest,
     RefreshTokenRequest,
     ResetPasswordRequest,
     ChangePasswordRequest,
-    RegisterUserRequest,
-    LoginUserRequest
+    RegisterUserRequest
 )
 from app.schemas.responses import TokenPairResponse, Response
 
@@ -47,35 +46,6 @@ async def register_broker(
     auth_service: FromDishka[AuthService]
 ):
     return await auth_service.register_broker(data)
-
-
-@router.post(
-    "/brokers/login", 
-    response_model=TokenPairResponse,
-    summary="Вход брокера",
-    description="Выдать access-token и "
-    "refresh-token для входа в приложение",
-    tags=log_broker_tags
-)
-async def login_broker(
-    data: LoginBrokerRequest,
-    auth_service: FromDishka[AuthService], 
-):
-    return await auth_service.login_broker(data)
-
-
-@router.post(
-    "/brokers/reset-password", 
-    response_model=Response,
-    summary="Сброс пароля",
-    description="На почту отправляется письмо для смены пароля",
-    tags=log_broker_tags
-)
-async def reset_password(
-    auth_service: FromDishka[AuthService],
-    data: ChangePasswordRequest
-):
-    return await auth_service.reset_password(data.email, UserType.BROKER.value)
 
 
 @router.post(
@@ -112,46 +82,32 @@ async def register_user(
 
 
 @router.post(
-    "/users/login", 
+    "/login",
+    summary="Вход в приложение",
     response_model=TokenPairResponse, 
-    description="Создает нового пользователя в системе. "
-    "После регистрации отправляется письмо на email для подтверждения.",
-    tags=log_user_tags
+    description="Выдать access-token и "
+    "refresh-token для входа в приложение",
+    tags=log_broker_user_tags
 )
 async def login_user(
     auth_service: FromDishka[AuthService],
-    data: LoginUserRequest,
+    data: LoginRequest,
 ):
-    return await auth_service.login_user(data)
+    return await auth_service.login(data)
 
 
 @router.post(
-    "/users/reset-password", 
+    "/logout", 
     response_model=Response,
-    summary="Вход брокера",
-    description="Выдать access-token и "
-    "refresh-token для входа в приложение",
-    tags=log_user_tags
+    summary="Выход из приложения",
+    description="Требуется refresh-токен",
+    tags=log_broker_user_tags
 )
-async def reset_password(
+async def logout(
     auth_service: FromDishka[AuthService],
-    data: ChangePasswordRequest
+    data: LogoutRequest,
 ):
-    return await auth_service.reset_password(data.email, UserType.USER.value)
-
-
-@router.patch(
-    "/verify-email", 
-    response_model=Response,
-    summary="Подтвердить почту",
-    description="После подтверждения почты аккаунт становится активным",
-    tags=reg_broker_user_tags
-)
-async def verify_email(
-    auth_service: FromDishka[AuthService],
-    data: EmailTokenRequest
-):
-    return await auth_service.verify_email(data.email_token)
+    return await auth_service.logout(data.refresh_token)
 
 
 @router.post(
@@ -169,17 +125,18 @@ async def refresh_token(
 
 
 @router.post(
-    "/logout", 
+    "/reset-password", 
     response_model=Response,
-    summary="Выход из приложения",
-    description="Требуется refresh-токен",
+    summary="Сброс пароля",
+    description="Если аккаунт активен"
+    "на email отправляется письмо для смены пароля",
     tags=log_broker_user_tags
 )
-async def logout(
+async def reset_password(
     auth_service: FromDishka[AuthService],
-    data: LogoutRequest,
+    data: ChangePasswordRequest
 ):
-    return await auth_service.logout(data.refresh_token)
+    return await auth_service.reset_password(data.email)
 
 
 @router.patch(
@@ -194,3 +151,17 @@ async def reset_password_confirm(
     data: ResetPasswordRequest
 ):
     return await auth_service.reset_password_confirm(data)
+
+
+@router.patch(
+    "/verify-email", 
+    response_model=Response,
+    summary="Подтвердить почту",
+    description="После подтверждения почты аккаунт становится активным",
+    tags=reg_broker_user_tags
+)
+async def verify_email(
+    auth_service: FromDishka[AuthService],
+    data: EmailTokenRequest
+):
+    return await auth_service.verify_email(data.email_token)

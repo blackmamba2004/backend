@@ -1,8 +1,7 @@
 from .auth import LogoutRequest, ResetPasswordRequest
 from .broker import (
-    RegisterBrokerRequest, 
-    LoginBrokerRequest,
+    RegisterBrokerRequest
 )
 from .email import ChangePasswordRequest
 from .token import EmailTokenRequest, RefreshTokenRequest
-from .user import RegisterUserRequest, LoginUserRequest
+from .user import RegisterUserRequest, LoginRequest

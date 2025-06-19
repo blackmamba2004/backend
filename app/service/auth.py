@@ -21,11 +21,10 @@ from app.components import RedisCache
 from app.components.types import UserType, TokenType
 from app.components.utils import verify_password, get_password_hash, from_unix_timestamp, now
 from app.schemas.dto import (
-    RegisterBrokerDTO, 
-    LoginBrokerDTO, 
+    RegisterBrokerDTO,
     ResetPasswordDTO, 
     RegisterUserDTO,
-    LoginUserDTO
+    LoginDTO
 )
 from app.schemas.responses import TokenPairResponse, Response
 from app.service.email import EmailService
@@ -58,7 +57,9 @@ class AuthService:
             )
 
             if not broker:
-                broker = await uow.broker_repository.create(body)
+                broker = await uow.broker_repository.create(
+                    body, message="This {field} is taken"
+                )
 
             elif broker and broker.is_active:
                 raise EmailException(message="This email is taken")
@@ -131,7 +132,7 @@ class AuthService:
         )
         return Response(message="Account is activated")
     
-    async def login_broker(self, body: LoginBrokerDTO):
+    async def login_broker(self, body: LoginDTO):
         async with self._uow as uow:
             broker = await uow.broker_repository.find_one(email=body.email)
             if not broker:
@@ -152,8 +153,9 @@ class AuthService:
                 refresh_token=refresh_token
             )
     
-    async def login_user(self, body: LoginUserDTO):
+    async def login_user(self, body: LoginDTO):
         async with self._uow as uow:
+            logger.info(body.email)
             user = await uow.user_repository.find_one(email=body.email)
             if not user:
                 raise UnautorizedException("Email is incorrect")
@@ -169,7 +171,7 @@ class AuthService:
             )
 
             await self._redis_cache.set(
-                key_tuple=(user.id),
+                key_tuple=(user.id,),
                 body={"public_key": body.public_key},
                 ttl=int(self._jwt._config.refresh_token_ttl)
             )
@@ -179,6 +181,12 @@ class AuthService:
                 refresh_token=refresh_token
             )
     
+    async def login(self, body: LoginDTO):
+        if body.public_key is None:
+            return await self.login_broker(body)
+        
+        return await self.login_user(body)
+
     async def check_access_token(
         self, request: Request, authorization_header: str, user_type: str
     ) -> None:
@@ -270,16 +278,16 @@ class AuthService:
 
         return Response(message="Logged out")
 
-    async def reset_password(self, email: str, user_type: str):
+    async def reset_password(self, email: str):
         """
         :param user_type: передаем UserType.BROKER.value | UserType.USER.value
         """
         async with self._uow as uow:
-            if user_type == UserType.BROKER.value:
-                user = await uow.broker_repository.find_one(email=email)
-                
-            elif user_type == UserType.USER.value:
+            user = await uow.broker_repository.find_one(email=email)
+            user_type = UserType.BROKER
+            if not user:
                 user = await uow.user_repository.find_one(email=email)
+                user_type = UserType.USER
 
         if not user:
             raise EmailException("Account with this email is not found")

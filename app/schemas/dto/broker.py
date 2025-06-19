@@ -7,8 +7,3 @@ class RegisterBrokerDTO(BaseSchema):
     first_name: str
     last_name: str
     tel: str
-
-
-class LoginBrokerDTO(BaseSchema):
-    email: str
-    password: str

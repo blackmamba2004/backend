@@ -9,8 +9,3 @@ class RegisterBrokerRequest(BaseSchema):
     first_name: str
     last_name: str
     tel: str
-
-
-class LoginBrokerRequest(BaseSchema):
-    email: EmailStr
-    password: str

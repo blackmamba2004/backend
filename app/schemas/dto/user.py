@@ -10,7 +10,7 @@ class RegisterUserDTO(BaseSchema):
     invite_token: str
 
 
-class LoginUserDTO(BaseSchema):
+class LoginDTO(BaseSchema):
     email: str
     password: str
-    public_key: str
+    public_key: str | None

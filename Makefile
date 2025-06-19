@@ -1,8 +1,8 @@
-local-build:
+build-local:
 	docker compose --profile local-environment up --build
 
-local-up:
-	docker compose --profile local-environment up
+up-local:
+	docker compose -f docker-compose.dev.yaml --profile local-environment up
 
 build-dev:
 	docker compose -f docker-compose.dev.yaml --profile dev-backend-container build

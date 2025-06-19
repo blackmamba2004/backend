@@ -12,7 +12,7 @@ class RegisterUserRequest(BaseSchema):
     invite_token: str
 
 
-class LoginUserRequest(BaseSchema):
+class LoginRequest(BaseSchema):
     email: str
     password: str
-    public_key: str
+    public_key: str | None = None

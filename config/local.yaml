@@ -5,10 +5,6 @@ app:
   debug: True
   allow_origins: ["*"]
 
-uvicorn:
-  host: 0.0.0.0
-  port: 8000
-
 db:
   driver: asyncpg
   type: postgresql
