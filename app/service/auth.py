@@ -18,6 +18,7 @@ from app.components.exceptions import (
     TokenOwnerNotFoundException
 )
 from app.components import RedisCache
+from app.components.exceptions import UnautorizedException
 from app.components.types import UserType, TokenType
 from app.components.utils import verify_password, get_password_hash, from_unix_timestamp, now
 from app.schemas.dto import (
@@ -58,7 +59,7 @@ class AuthService:
 
             if not broker:
                 broker = await uow.broker_repository.create(
-                    body, message="This {field} is taken"
+                    body, error=UnautorizedException
                 )
 
             elif broker and broker.is_active:
@@ -85,8 +86,11 @@ class AuthService:
             user = await uow.user_repository.find_one(
                 email=body.email
             )
+
             if not user:
-                user = await uow.user_repository.create(body, broker_id=payload["sub"])
+                user = await uow.broker_repository.create(
+                    body, broker_id=payload["sub"], error=UnautorizedException
+                )
 
             elif user and user.is_active:
                 raise EmailException(message="This email is taken")

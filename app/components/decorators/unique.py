@@ -4,7 +4,7 @@ from typing import Callable, TypeVar, Awaitable
 
 from sqlalchemy.exc import IntegrityError
 
-from app.components.exceptions.database import UniqueConstraintViolationError
+from app.components.exceptions import ApplicationException
 
 F = TypeVar('F', bound=Callable[..., Awaitable])
 
@@ -19,7 +19,7 @@ def unique_error(func: F) -> F:
 
     @functools.wraps(func)
     async def wrapper(*args, **kwargs) -> Awaitable:
-        message_template = kwargs.pop("message", "Record with {field} already exists")
+        err_obj_template: ApplicationException = kwargs.pop("error")
         try:
             return await func(*args, **kwargs)
         except IntegrityError as e:
@@ -27,16 +27,14 @@ def unique_error(func: F) -> F:
             error_message = str(e)
 
             if "duplicate key value violates unique" in error_message:
+                final_message = "unknown"
                 field_name = None
                 if 'Key (' in error_message:
                     field_name = error_message.split('Key (')[1].split(')')[0]
-
-                final_message = message_template.format(field=field_name or "unknown")
-                raise UniqueConstraintViolationError(message=final_message) from e
-
-                raise UniqueConstraintViolationError(
-                    message=f"Record with {field_name} already exists"
-                ) from e
+                    final_message = f"This {field_name} is taken"
+                
+                raise err_obj_template(message=final_message) from e
+            
             else:
                 logger.error(error_message, exc_info=e)
                 raise
