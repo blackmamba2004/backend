@@ -36,7 +36,7 @@ api_key_header = APIKeyHeader(
 @router.post(
     "/brokers/register", 
     response_model=Response,
-    summary="Регистрация пользователя",
+    summary="Регистрация брокера",
     description="Создает нового пользователя в системе. "
     "После регистрации отправляется письмо на email для подтверждения.",
     tags=reg_broker_tags

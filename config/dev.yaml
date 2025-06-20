@@ -3,7 +3,7 @@ app:
   domain: /domain
   version: /api/v1
   debug: False
-  allow_origins: ["http://localhost:5173"]
+  allow_origins: ["http://localhost:5173", "http://smedlyff.beget.tech"]
 
 db:
   driver: asyncpg
