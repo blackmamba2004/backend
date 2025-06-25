@@ -6,8 +6,7 @@ from jwt import InvalidTokenError
 
 from app.components import JWT
 from app.components.exceptions import (
-    EmailException, 
-    TelException, 
+    EmailException,
     UnautorizedException,
     NotAuthHeaderException, 
     IncorrectAuthHeaderException,
@@ -19,11 +18,11 @@ from app.components.exceptions import (
 )
 from app.components import RedisCache
 from app.components.exceptions import UnautorizedException
-from app.components.types import UserType, TokenType
+from app.components.types import UserRole, TokenType
 from app.components.utils import verify_password, get_password_hash, from_unix_timestamp, now
 from app.schemas.dto import (
     RegisterBrokerDTO,
-    ResetPasswordDTO, 
+    ResetPasswordDTO,
     RegisterUserDTO,
     LoginDTO
 )
@@ -52,30 +51,7 @@ class AuthService:
         self._jwt = jwt
         
     async def register_broker(self, body: RegisterBrokerDTO):
-        async with self._uow as uow:
-            broker = await uow.broker_repository.find_one(
-                email=body.email
-            )
-
-            if not broker:
-                broker = await uow.broker_repository.create(
-                    body, error=UnautorizedException
-                )
-
-            elif broker and broker.is_active:
-                raise EmailException(message="This email is taken")
-
-            await uow.commit()
-
-        await self._send_email_with_token(
-            broker.id, 
-            UserType.BROKER.value, 
-            body.email,
-            "Регистрация",
-            "Перейдите по ссылке для подтверждения аккаунта"
-        )
-
-        return Response(message="Confirm your email")
+        return await self.register(body, role=UserRole.BROKER)
 
     async def register_user(self, body: RegisterUserDTO):
         payload = await self._verify_token_with_exceptions(
@@ -83,47 +59,52 @@ class AuthService:
         )
 
         async with self._uow as uow:
+            user = await uow.user_repository.find_by_id(payload["sub"])
+
+            if not user:
+                raise TokenOwnerNotFoundException(
+                    message="Referal user doesn't exist"
+                )
+
+        return await self.register(body, ref_id=payload["sub"])
+    
+    async def register(self, body, **model_fields):
+        """
+        :param user_role: передаем UserRole.BROKER | UserRole.USER
+        """
+        async with self._uow as uow:
             user = await uow.user_repository.find_one(
                 email=body.email
             )
 
-            if not user:
-                user = await uow.user_repository.create(
-                    body, broker_id=payload["sub"], error=UnautorizedException
-                )
-
-            elif user and user.is_active:
+            if user and user.is_active:
                 raise EmailException(message="This email is taken")
+
+            elif not user:
+                user = await uow.user_repository.create(
+                    body, error=UnautorizedException, **model_fields
+                )
 
             await uow.commit()
 
         await self._send_email_with_token(
-            user.id, 
-            UserType.USER.value, 
-            body.email, 
-            "Регистрация", 
+            user.id,
+            body.email,
+            "Регистрация",
             "Перейдите по ссылке для подтверждения аккаунта"
         )
+
         return Response(message="Confirm your email")
-    
+
     async def verify_email(self, token: str):
         payload = await self._verify_token_with_exceptions(
             token, TokenType.EMAIL.value
         )
 
         async with self._uow as uow:
-            if payload["user_type"] == UserType.BROKER.value:
-                broker = await uow.broker_repository.find_by_id(payload["sub"])
-                if broker:
-                    await uow.broker_repository.update(db_obj=broker, obj_in={"is_active": True})
-            
-            elif payload["user_type"] == UserType.USER.value:
-                user = await uow.user_repository.find_by_id(payload["sub"])
-                if user:
-                    await uow.user_repository.update(db_obj=user, obj_in={"is_active": True})
-        
-            else:
-                raise UnautorizedException("Incorrect user type")
+            user = await uow.user_repository.find_by_id(payload["sub"])
+            if user:
+                await uow.user_repository.update(db_obj=user, obj_in={"is_active": True})
 
             await uow.commit()
 
@@ -136,65 +117,10 @@ class AuthService:
         )
         return Response(message="Account is activated")
     
-    # async def login_broker(self, body: LoginDTO):
-    #     async with self._uow as uow:
-    #         broker = await uow.broker_repository.find_one(email=body.email)
-    #         if not broker:
-    #             raise UnautorizedException("Email is incorrect")
-            
-    #         if not verify_password(body.password, broker.hashed_password):
-    #             raise UnautorizedException("Password is incorrect")
-            
-    #         if not broker.is_active:
-    #             raise UnautorizedException("Account is not activated")
-            
-    #         access_token, refresh_token = self._jwt.issue_tokens_for_user(
-    #             str(broker.id), user_type=UserType.BROKER.value
-    #         )
-
-    #         return TokenPairResponse(
-    #             access_token=access_token,
-    #             refresh_token=refresh_token
-    #         )
-    
-    # async def login_user(self, body: LoginDTO):
-    #     async with self._uow as uow:
-    #         user = await uow.user_repository.find_one(email=body.email)
-    #         if not user:
-    #             raise UnautorizedException("Email is incorrect")
-            
-    #         if not verify_password(body.password, user.hashed_password):
-    #             raise UnautorizedException("Password is incorrect")
-            
-    #         if not user.is_active:
-    #             raise UnautorizedException("Account is not activated")
-            
-    #         access_token, refresh_token = self._jwt.issue_tokens_for_user(
-    #             str(user.id), user_type=UserType.USER.value
-    #         )
-
-    #         await self._redis_cache.set(
-    #             key_tuple=(user.id,),
-    #             body={"public_key": body.public_key},
-    #             ttl=int(self._jwt._config.refresh_token_ttl)
-    #         )
-            
-    #         return TokenPairResponse(
-    #             access_token=access_token,
-    #             refresh_token=refresh_token
-    #         )
-    
     async def login(self, body: LoginDTO):
-        # if body.public_key is None:
-        #     return await self.login_broker(body)
-        
-        # return await self.login_user(body)
         async with self._uow as uow:
-            user = await uow.broker_repository.find_one(email=body.email)
-            user_type = UserType.BROKER.value
-            if not user:
-                user = await uow.user_repository.find_one(email=body.email)
-                user_type = UserType.USER.value
+            user = await uow.user_repository.find_one(email=body.email)
+
             if not user:
                 raise UnautorizedException("Email is incorrect")
             
@@ -204,9 +130,7 @@ class AuthService:
             if not user.is_active:
                 raise UnautorizedException("Account is not activated")
             
-            access_token, refresh_token = self._jwt.issue_tokens_for_user(
-                str(user.id), user_type=user_type
-            )
+            access_token, refresh_token = self._jwt.issue_tokens_for_user(str(user.id))
 
             await self._redis_cache.set(
                 key_tuple=(user.id,),
@@ -220,54 +144,46 @@ class AuthService:
             )
 
     async def check_access_token(
-        self, request: Request, authorization_header: str, user_type: str
+        self, request: Request, authorization_header: str, user_role: UserRole
     ) -> None:
         """
-        :param user_type: передаем UserType.BROKER.value | UserType.USER.value
+        :param user_role: передаем UserRole.BROKER | UserRole.USER
         """
+
         clear_token = self.__try_to_get_clear_token(authorization_header)
 
         payload = await self._verify_token_with_exceptions(
             clear_token, TokenType.ACCESS.value
         )
 
-        if payload["user_type"] != user_type:
-            raise ForbiddenException("You have not enough permissions")
-        
         async with self._uow as uow:
-            if user_type == UserType.BROKER.value:
-                broker = await uow.broker_repository.find_by_id(payload["sub"])
-                if not broker:
-                    raise TokenOwnerNotFoundException("Token owner is not found")
-                request.state.broker = broker
-                
-            elif user_type == UserType.USER.value:
-                user = await uow.user_repository.find_by_id(payload["sub"])
-                if not user:
-                    raise TokenOwnerNotFoundException("Token owner is not found")
-                request.state.user = user
+            user = await uow.user_repository.find_by_id(payload["sub"])
 
+            if not user:
+                raise TokenOwnerNotFoundException("Token owner is not found")
+            
+            if user.role != user_role:
+                raise ForbiddenException("You have not enough permissions")
+            
+        request.state.user = user
+
+    async def check_broker_access_token(
+        self, request: Request, authorization_header: str
+    ) -> None:
+        await self.check_access_token(request, authorization_header, UserRole.BROKER)
+            
     async def refresh_tokens(self, refresh_token: str):
         payload = await self._verify_token_with_exceptions(
             refresh_token, TokenType.REFRESH.value
         )
         
         async with self._uow as uow:
-            if payload["user_type"] == UserType.BROKER.value:
-                user = await uow.broker_repository.find_by_id(payload["sub"])
-                
-            elif payload["user_type"] == UserType.USER.value:
-                user = await uow.user_repository.find_by_id(payload["sub"])
-            
-            else:
-                raise ForbiddenException("Incorrect user type")
+            user = await uow.user_repository.find_by_id(payload["sub"])
 
         if not user:
             raise TokenOwnerNotFoundException("Token owner is not found")
         
-        access_token, new_refresh_token = self._jwt.issue_tokens_for_user(
-            str(user.id), user_type=payload["user_type"]
-        )
+        access_token, new_refresh_token = self._jwt.issue_tokens_for_user(str(user.id))
 
         expired = from_unix_timestamp(payload["exp"]) - now()
 
@@ -288,15 +204,8 @@ class AuthService:
         )
         
         async with self._uow as uow:
-            if payload["user_type"] == UserType.BROKER.value:
-                user = await uow.broker_repository.find_by_id(payload["sub"])
-                
-            elif payload["user_type"] == UserType.USER.value:
-                user = await uow.user_repository.find_by_id(payload["sub"])
-
-            else:
-                raise ForbiddenException("Incorrect user type")
-
+            user = await uow.user_repository.find_by_id(payload["sub"])
+        
         if not user:
             raise TokenOwnerNotFoundException("Token owner is not found")
 
@@ -311,15 +220,8 @@ class AuthService:
         return Response(message="Logged out")
 
     async def reset_password(self, email: str):
-        """
-        :param user_type: передаем UserType.BROKER.value | UserType.USER.value
-        """
         async with self._uow as uow:
-            user = await uow.broker_repository.find_one(email=email)
-            user_type = UserType.BROKER
-            if not user:
-                user = await uow.user_repository.find_one(email=email)
-                user_type = UserType.USER
+            user = await uow.user_repository.find_one(email=email)
 
         if not user:
             raise EmailException("Account with this email is not found")
@@ -328,7 +230,7 @@ class AuthService:
             raise UnautorizedException("Account is not activated")
         
         await self._send_email_with_token(
-            user.id, user_type, email, "Сброс пароля","Перейдите по ссылке для сброса пароля"
+            user.id, email, "Сброс пароля","Перейдите по ссылке для сброса пароля"
         )
         return Response(message="If an account with this email exists, we sent a password reset link.")
     
@@ -338,11 +240,7 @@ class AuthService:
         )
         
         async with self._uow as uow:
-            if payload["user_type"] == UserType.BROKER.value:
-                user = await uow.broker_repository.find_by_id(payload["sub"])
-                
-            elif payload["user_type"] == UserType.USER.value:
-                user = await uow.user_repository.find_by_id(payload["sub"])
+            user = await uow.user_repository.find_by_id(payload["sub"])
                 
             if not user:
                 raise TokenOwnerNotFoundException("Token owner is not found")
@@ -390,14 +288,12 @@ class AuthService:
         return payload
     
     async def _send_email_with_token(
-        self, user_id, user_type: str, email: str, subject: str, body: str
+        self, user_id, email: str, subject: str, body: str
     ):
         """
         :param user_type: передаем UserType.BROKER.value | UserType.USER.value
         """
-        email_token = self._jwt.generate_email_token(
-            str(user_id), user_type=user_type
-        )
+        email_token = self._jwt.generate_email_token(str(user_id))
 
         logger.info(f"Email token: {email_token}")
 

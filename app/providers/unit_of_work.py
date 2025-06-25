@@ -1,7 +1,7 @@
 from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.repository import BrokerRepository, UserRepository
+from app.repository import UserRepository
 from app.unit_of_work import AuthUnitOfWork
 
 
@@ -15,7 +15,6 @@ class UnitOfWorkProvider(Provider):
         return AuthUnitOfWork(
             session=async_session,
             repository_list=[
-                BrokerRepository(),
                 UserRepository()
             ]
         )

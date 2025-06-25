@@ -1,3 +1,3 @@
 from .jwt import TokenType
 from .sqlalchemy import AsyncSessionFactory, NullColumn
-from .user import UserType
+from .user import UserRole

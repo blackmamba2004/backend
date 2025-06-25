@@ -13,6 +13,6 @@ class RegisterUserRequest(BaseSchema):
 
 
 class LoginRequest(BaseSchema):
-    email: str
+    email: EmailStr
     password: str
     public_key: str | None = None

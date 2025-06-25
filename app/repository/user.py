@@ -1,8 +1,6 @@
 from typing import Any, Type
 import logging
 
-from sqlalchemy import select, exists
-
 from app.components.utils import get_password_hash
 from app.models import User
 from app.repository.base import BaseRepository

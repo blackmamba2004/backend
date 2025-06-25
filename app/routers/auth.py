@@ -2,7 +2,6 @@ from dishka.integrations.fastapi import FromDishka, DishkaRoute
 from fastapi import APIRouter, Request, Security
 from fastapi.security.api_key import APIKeyHeader
 
-from app.components.types import UserType
 from app.routers.tags import (
     reg_broker_tags,
     log_broker_tags,
@@ -60,10 +59,10 @@ async def invite_user(
     auth_service: FromDishka[AuthService],
     authorization = Security(api_key_header)
 ):
-    await auth_service.check_access_token(
-        request, authorization, UserType.BROKER.value
+    await auth_service.check_broker_access_token(
+        request, authorization
     )
-    return await auth_service.invite_user(request.state.broker)
+    return await auth_service.invite_user(request.state.user)
 
 
 @router.post(
