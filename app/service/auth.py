@@ -88,7 +88,7 @@ class AuthService:
             )
 
             if not user:
-                user = await uow.broker_repository.create(
+                user = await uow.user_repository.create(
                     body, broker_id=payload["sub"], error=UnautorizedException
                 )
 
@@ -136,31 +136,65 @@ class AuthService:
         )
         return Response(message="Account is activated")
     
-    async def login_broker(self, body: LoginDTO):
-        async with self._uow as uow:
-            broker = await uow.broker_repository.find_one(email=body.email)
-            if not broker:
-                raise UnautorizedException("Email is incorrect")
+    # async def login_broker(self, body: LoginDTO):
+    #     async with self._uow as uow:
+    #         broker = await uow.broker_repository.find_one(email=body.email)
+    #         if not broker:
+    #             raise UnautorizedException("Email is incorrect")
             
-            if not verify_password(body.password, broker.hashed_password):
-                raise UnautorizedException("Password is incorrect")
+    #         if not verify_password(body.password, broker.hashed_password):
+    #             raise UnautorizedException("Password is incorrect")
             
-            if not broker.is_active:
-                raise UnautorizedException("Account is not activated")
+    #         if not broker.is_active:
+    #             raise UnautorizedException("Account is not activated")
             
-            access_token, refresh_token = self._jwt.issue_tokens_for_user(
-                str(broker.id), user_type=UserType.BROKER.value
-            )
+    #         access_token, refresh_token = self._jwt.issue_tokens_for_user(
+    #             str(broker.id), user_type=UserType.BROKER.value
+    #         )
 
-            return TokenPairResponse(
-                access_token=access_token,
-                refresh_token=refresh_token
-            )
+    #         return TokenPairResponse(
+    #             access_token=access_token,
+    #             refresh_token=refresh_token
+    #         )
     
-    async def login_user(self, body: LoginDTO):
+    # async def login_user(self, body: LoginDTO):
+    #     async with self._uow as uow:
+    #         user = await uow.user_repository.find_one(email=body.email)
+    #         if not user:
+    #             raise UnautorizedException("Email is incorrect")
+            
+    #         if not verify_password(body.password, user.hashed_password):
+    #             raise UnautorizedException("Password is incorrect")
+            
+    #         if not user.is_active:
+    #             raise UnautorizedException("Account is not activated")
+            
+    #         access_token, refresh_token = self._jwt.issue_tokens_for_user(
+    #             str(user.id), user_type=UserType.USER.value
+    #         )
+
+    #         await self._redis_cache.set(
+    #             key_tuple=(user.id,),
+    #             body={"public_key": body.public_key},
+    #             ttl=int(self._jwt._config.refresh_token_ttl)
+    #         )
+            
+    #         return TokenPairResponse(
+    #             access_token=access_token,
+    #             refresh_token=refresh_token
+    #         )
+    
+    async def login(self, body: LoginDTO):
+        # if body.public_key is None:
+        #     return await self.login_broker(body)
+        
+        # return await self.login_user(body)
         async with self._uow as uow:
-            logger.info(body.email)
-            user = await uow.user_repository.find_one(email=body.email)
+            user = await uow.broker_repository.find_one(email=body.email)
+            user_type = UserType.BROKER.value
+            if not user:
+                user = await uow.user_repository.find_one(email=body.email)
+                user_type = UserType.USER.value
             if not user:
                 raise UnautorizedException("Email is incorrect")
             
@@ -171,7 +205,7 @@ class AuthService:
                 raise UnautorizedException("Account is not activated")
             
             access_token, refresh_token = self._jwt.issue_tokens_for_user(
-                str(user.id), user_type=UserType.USER.value
+                str(user.id), user_type=user_type
             )
 
             await self._redis_cache.set(
@@ -184,12 +218,6 @@ class AuthService:
                 access_token=access_token,
                 refresh_token=refresh_token
             )
-    
-    async def login(self, body: LoginDTO):
-        if body.public_key is None:
-            return await self.login_broker(body)
-        
-        return await self.login_user(body)
 
     async def check_access_token(
         self, request: Request, authorization_header: str, user_type: str

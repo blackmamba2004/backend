@@ -11,7 +11,7 @@ class BaseModel:
     # Generate __tablename__ automatically
     @declared_attr
     def __tablename__(cls) -> str:
-        return cls.__name__.lower()
+        return cls.__name__.lower() + "s"
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(id={self.id})"

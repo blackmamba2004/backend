@@ -17,7 +17,7 @@ class User(BaseModel, UserMixin, TimestampMixin):
     )
 
     broker_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("broker.id", onupdate="CASCADE"), 
+        ForeignKey("brokers.id", onupdate="CASCADE"), 
         index=True
     )
     
