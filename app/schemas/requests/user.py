@@ -1,10 +1,7 @@
-from pydantic import EmailStr
-
-from app.schemas import BaseSchema
+from app.schemas.requests.mixin import EmailMixin
 
 
-class RegisterUserRequest(BaseSchema):
-    email: EmailStr
+class RegisterUserRequest(EmailMixin):
     password: str
     first_name: str
     last_name: str
@@ -12,7 +9,6 @@ class RegisterUserRequest(BaseSchema):
     invite_token: str
 
 
-class LoginRequest(BaseSchema):
-    email: EmailStr
+class LoginRequest(EmailMixin):
     password: str
     public_key: str | None = None

@@ -4,6 +4,9 @@ build-local:
 up-local:
 	docker compose -f docker-compose.dev.yaml --profile local-environment up
 
+down-local:
+	docker compose -f docker-compose.dev.yaml --profile local-environment down
+
 build-dev:
 	docker compose -f docker-compose.dev.yaml --profile dev-backend-container build
 
@@ -12,3 +15,6 @@ up-dev:
 
 down-dev:
 	docker compose -f docker-compose.dev.yaml --profile dev-backend-container down
+
+rm-volume:
+	rm -rf ./data

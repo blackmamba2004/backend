@@ -1,8 +1,10 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 export MAIN_CONFIG_PATH=config/local.yaml
 export LOGGER_CONFIG_PATH=config/logger.yaml
+
+source .venv/bin/activate
 
 # Run migrations
 alembic upgrade head

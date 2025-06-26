@@ -5,3 +5,5 @@ from .broker import (
 from .email import ChangePasswordRequest
 from .token import EmailTokenRequest, RefreshTokenRequest
 from .user import RegisterUserRequest, LoginRequest
+
+from .mixin import EmailMixin

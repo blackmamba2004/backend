@@ -1,10 +1,7 @@
-from pydantic import EmailStr
-
-from app.schemas import BaseSchema
+from app.schemas.requests.mixin import EmailMixin
 
 
-class RegisterBrokerRequest(BaseSchema):
-    email: EmailStr
+class RegisterBrokerRequest(EmailMixin):
     password: str
     first_name: str
     last_name: str
