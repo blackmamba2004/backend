@@ -1,9 +1,11 @@
 from typing import Any, Type
 import logging
 
+from app.components.decorators.unique import unique_error
+from app.components.exceptions import UnautorizedException
 from app.components.utils import get_password_hash
 from app.models import User
-from app.repository.base import BaseRepository
+from app.repository.base import BaseRepository, CreatingSchemaType
 from app.schemas import BaseSchema
 
 
@@ -30,3 +32,10 @@ class UserRepository(BaseRepository[User]):
         if "password" in fields:
             fields["hashed_password"] = get_password_hash(fields.pop("password"))
         return fields
+
+
+    @unique_error(error_class=UnautorizedException)
+    async def create(self, 
+        obj_in: CreatingSchemaType | dict[str, Any], **extra_model_fields
+    ):
+        return await super().create(obj_in, **extra_model_fields)

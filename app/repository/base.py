@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import BaseModel
 from app.schemas import BaseSchema
-from app.components.decorators.unique import unique_error
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +103,6 @@ class BaseRepository(ABC, Generic[ModelType]):
                 setattr(db_obj, field, fields[field])
         return db_obj
 
-    @unique_error
     async def create(
         self, obj_in: CreatingSchemaType | dict[str, Any], **kwargs
     ) -> ModelType:

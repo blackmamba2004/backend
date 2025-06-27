@@ -68,7 +68,7 @@ class AuthService:
 
         return await self.register(body, ref_id=payload["sub"])
     
-    async def register(self, body, **model_fields):
+    async def register(self, body, **extra_model_fields):
         """
         :param user_role: передаем UserRole.BROKER | UserRole.USER
         """
@@ -82,7 +82,7 @@ class AuthService:
 
             elif not user:
                 user = await uow.user_repository.create(
-                    body, error=UnautorizedException, **model_fields
+                    body, **extra_model_fields
                 )
 
             await uow.commit()
