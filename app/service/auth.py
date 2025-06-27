@@ -73,18 +73,9 @@ class AuthService:
         :param user_role: передаем UserRole.BROKER | UserRole.USER
         """
         async with self._uow as uow:
-            user = await uow.user_repository.find_one(
-                email=body.email
+            user = await uow.user_repository.create(
+                body, **model_fields
             )
-
-            if user and user.is_active:
-                raise EmailException(message="This email is taken")
-
-            elif not user:
-                user = await uow.user_repository.create(
-                    body, error=UnautorizedException, **model_fields
-                )
-
             await uow.commit()
 
         await self._send_email_with_token(
