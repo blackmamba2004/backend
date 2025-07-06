@@ -1,8 +1,8 @@
 from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.repository import UserRepository
-from app.unit_of_work import AuthUnitOfWork
+from app.repository import UserRepository, ServiceRepository
+from app.unit_of_work import AuthUnitOfWork, ServiceUnitOfWork
 
 
 class UnitOfWorkProvider(Provider):
@@ -16,5 +16,16 @@ class UnitOfWorkProvider(Provider):
             session=async_session,
             repository_list=[
                 UserRepository()
+            ]
+        )
+
+    @provide
+    def get_service_unit_of_work(
+        self, async_session: AsyncSession
+    ) -> ServiceUnitOfWork:
+        return ServiceUnitOfWork(
+            session=async_session,
+            repository_list=[
+                ServiceRepository()
             ]
         )

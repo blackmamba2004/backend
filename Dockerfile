@@ -20,10 +20,8 @@ ENV VENV_PATH=$VENV_PATH_ARG
 RUN python -m venv "$VENV_PATH"
 ENV PATH="$VENV_PATH/bin:$PATH"
 
-SHELL ["/bin/bash", "-c"]
+RUN pip install poetry && \
+    poetry config virtualenvs.create false && \
+    poetry install --no-root
 
-RUN source "$VENV_PATH/bin/activate" && pip install poetry
-RUN source "$VENV_PATH/bin/activate" && poetry config virtualenvs.create false
-RUN source "$VENV_PATH/bin/activate" && poetry install --no-root
-
-CMD ["bash", "cmd/start-dev.sh"]
+CMD ["bash", "cmd/start/dev.sh"]

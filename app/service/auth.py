@@ -18,8 +18,15 @@ from app.components.exceptions import (
 )
 from app.components import RedisCache
 from app.components.exceptions import UnautorizedException
-from app.components.types import UserRole, TokenType
-from app.components.utils import verify_password, get_password_hash, from_unix_timestamp, now
+from app.components.types import TokenType
+from app.components.utils import (
+    verify_password, 
+    get_password_hash, 
+    from_unix_timestamp, 
+    now
+)
+from app.models import User
+from app.models.user import UserRole
 from app.schemas.dto import (
     RegisterBrokerDTO,
     ResetPasswordDTO,
@@ -42,13 +49,15 @@ class AuthService:
         email_service: EmailService,
         linker_service: LinkerService,
         redis_cache: RedisCache,
-        jwt: JWT
+        jwt: JWT,
+        request: Request
     ):
         self._uow = unit_of_work
         self._email_service = email_service
         self._linker_service = linker_service
         self._redis_cache = redis_cache
         self._jwt = jwt
+        self._request = request
         
     async def register_broker(self, body: RegisterBrokerDTO):
         return await self.register(body, role=UserRole.BROKER)
@@ -140,17 +149,20 @@ class AuthService:
             
             return TokenPairResponse(
                 access_token=access_token,
-                refresh_token=refresh_token
+                refresh_token=refresh_token,
+                user_role=user.role
             )
 
     async def check_access_token(
-        self, request: Request, authorization_header: str, user_role: UserRole
-    ) -> None:
+        self, user_roles: tuple[UserRole]
+    ) -> User:
         """
-        :param user_role: передаем UserRole.BROKER | UserRole.USER
+        :param user_role: передаем [UserRole.BROKER] | [UserRole.USER] | [UserRole.ADMIN]
         """
 
-        clear_token = self.__try_to_get_clear_token(authorization_header)
+        auth_header = self._request.headers.get("Authorization")
+
+        clear_token = self.__try_to_get_clear_token(auth_header)
 
         payload = await self._verify_token_with_exceptions(
             clear_token, TokenType.ACCESS.value
@@ -162,16 +174,23 @@ class AuthService:
             if not user:
                 raise TokenOwnerNotFoundException("Token owner is not found")
             
-            if user.role != user_role:
+            if user.role not in user_roles:
                 raise ForbiddenException("You have not enough permissions")
             
-        request.state.user = user
+        return user
 
-    async def check_broker_access_token(
-        self, request: Request, authorization_header: str
-    ) -> None:
-        await self.check_access_token(request, authorization_header, UserRole.BROKER)
-            
+    async def check_admin_access_token(self) -> User:
+        return await self.check_access_token((UserRole.ADMIN,))
+
+    async def check_broker_access_token(self) -> User:
+        return await self.check_access_token((UserRole.BROKER,))
+
+    async def check_client_access_token(self) -> User:
+        return await self.check_access_token((UserRole.USER,))
+    
+    async def check_any_access_token(self) -> User:
+        return await self.check_access_token((UserRole.ADMIN, UserRole.BROKER, UserRole.USER,))
+    
     async def refresh_tokens(self, refresh_token: str):
         payload = await self._verify_token_with_exceptions(
             refresh_token, TokenType.REFRESH.value

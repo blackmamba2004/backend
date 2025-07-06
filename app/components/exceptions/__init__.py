@@ -4,6 +4,7 @@ from .bad_request import (
     IncorrectAuthHeaderException,
     NotAuthHeaderException
 )
+from .conflict import ConflictException
 from .forbidden import (
     ForbiddenException, 
     IncorrectTokenTypeException, 
@@ -12,6 +13,7 @@ from .forbidden import (
     TokenOwnerNotFoundException
 )
 from .handlers import application_exception_handler
+from .not_found import NotFoundException
 from .unathorized import (
     EmailException, 
     UnautorizedException, 

@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Type, TypeVar
+from typing import Any, Generic, Type, TypeVar, Sequence
 from uuid import UUID
 
 import logging
 
-from sqlalchemy import and_, or_, select, exists, inspect, Result, Executable
+from sqlalchemy import and_, or_, select, exists, inspect, Result, Executable, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.components.exceptions import NotFoundException
 from app.models import BaseModel
 from app.schemas import BaseSchema
 
@@ -50,7 +51,7 @@ class BaseRepository(ABC, Generic[ModelType]):
         """
         instance = await self._session.get(self._model_class, id_)
         if exception_on_none and instance is None:
-            raise Exception(f"{self.get_model_class().__name__} with ID={id_} not found")
+            raise NotFoundException(f"{self.get_model_class().__name__} with ID={id_} not found")
 
         return instance
 
@@ -65,10 +66,31 @@ class BaseRepository(ABC, Generic[ModelType]):
         query = select(self._model_class).filter_by(**filters).limit(1)
         instance = (await self._get_query_result(query)).scalars().first()
         if exception_on_none and instance is None:
-            raise Exception(f"{self.get_model_class().__name__} with ID={id} not found")
+            raise NotFoundException(f"{self.get_model_class().__name__} with ID={id} not found")
 
         return instance
 
+    async def find_all(self, **filters) -> Sequence[ModelType]:
+        """
+        Найти все модели в базе данных по фильтрам
+
+        :param filters: Фильтры, переданные в виде именованных аргументов
+        :return: Список объектов моделей
+        """
+        query = select(self._model_class).filter_by(**filters)
+        return (await self._get_query_result(query)).scalars().all()
+    
+    async def delete_by_id(self, id: str | int | UUID) -> None:
+        """
+        Удалить запись из базы данных по её ID.
+
+        :param id: UUID записи для удаления
+        """
+        if isinstance(id, UUID):
+            id = str(id)
+        stmt = delete(self._model_class).where(self._model_class.id == id)
+        await self._get_query_result(stmt)
+    
     async def _adapt_fields(
         self, obj: dict[str, Any] | BaseSchema, **kwargs
     ) -> dict[str, Any]:

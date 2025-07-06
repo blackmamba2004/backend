@@ -5,6 +5,7 @@ from .config import ConfigProvider
 from .service import ServiceProvider
 from .session import SessionProvider
 from .unit_of_work import UnitOfWorkProvider
+from .user import UserProvider
 
 
 def provider_list() -> list[Provider]:
@@ -13,5 +14,6 @@ def provider_list() -> list[Provider]:
         ConfigProvider(),
         ServiceProvider(),
         SessionProvider(),
-        UnitOfWorkProvider()
+        UnitOfWorkProvider(),
+        UserProvider()
     ]

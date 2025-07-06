@@ -9,4 +9,4 @@ source .venv/bin/activate
 # Run migrations
 alembic upgrade head
 
-uvicorn --reload app.main:app --host 127.0.0.1 --port 8088
+uvicorn app.main:app --host 127.0.0.1 --port 8088 --reload --loop uvloop

@@ -1,9 +1,10 @@
 from dishka import Provider, Scope, provide
+from fastapi import Request
 
 from app.components import JWT, RedisCache
 from app.config import AppConfig, SMTPConfig
-from app.service import AuthService, EmailService, LinkerService
-from app.unit_of_work import AuthUnitOfWork
+from app.service import AuthService, EmailService, LinkerService, Service
+from app.unit_of_work import AuthUnitOfWork, ServiceUnitOfWork
 
 
 class ServiceProvider(Provider):
@@ -16,10 +17,16 @@ class ServiceProvider(Provider):
         email_service: EmailService,
         linker_service: LinkerService,
         redis_cache: RedisCache,
-        jwt: JWT
+        jwt: JWT,
+        request: Request
     ) -> AuthService:
         return AuthService(
-            auth_unit_of_work, email_service, linker_service, redis_cache, jwt
+            auth_unit_of_work, 
+            email_service, 
+            linker_service, 
+            redis_cache, 
+            jwt,
+            request
         )
     
     @provide(scope=Scope.APP)
@@ -29,3 +36,11 @@ class ServiceProvider(Provider):
     @provide(scope=Scope.APP)
     def get_linker_service(self) -> LinkerService:
         return LinkerService()
+    
+    @provide
+    def get_service(self, unit_of_work: ServiceUnitOfWork) -> Service:
+        return Service(unit_of_work)
+    
+    @provide
+    async def get_request(self) -> Request:
+        return Request()

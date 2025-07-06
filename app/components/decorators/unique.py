@@ -12,7 +12,7 @@ F = TypeVar('F', bound=Callable[..., Awaitable])
 logger = logging.getLogger(__name__)
 
 
-def unique_error(error_class: Type[ApplicationException]):
+def unique_error(error_class: Type[ApplicationException], message: str = None):
     """
     Параметризованный декоратор: ловит ошибки уникальности и поднимает переданный тип исключения
     """
@@ -26,6 +26,8 @@ def unique_error(error_class: Type[ApplicationException]):
                 error_message = str(e)
 
                 if "duplicate key value violates unique" in error_message:
+                    if message:
+                        raise error_class(message=message) from e
                     if 'Key (' in error_message:
                         field_name = error_message.split('Key (')[1].split(')')[0]
                         final_message = f"This {field_name} is taken"

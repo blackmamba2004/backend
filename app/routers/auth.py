@@ -1,12 +1,10 @@
 from dishka.integrations.fastapi import FromDishka, DishkaRoute
-from fastapi import APIRouter, Request, Security
+from fastapi import APIRouter, Security
 from fastapi.security.api_key import APIKeyHeader
 
 from app.routers.tags import (
     reg_broker_tags,
-    log_broker_tags,
     reg_user_tags,
-    log_user_tags,
     log_broker_user_tags,
     reg_broker_user_tags
 )
@@ -23,8 +21,8 @@ from app.schemas.requests import (
 )
 from app.schemas.responses import TokenPairResponse, Response
 
-router = APIRouter(route_class=DishkaRoute)
 
+router = APIRouter(route_class=DishkaRoute)
 
 
 api_key_header = APIKeyHeader(
@@ -38,7 +36,7 @@ api_key_header = APIKeyHeader(
     summary="Регистрация брокера",
     description="Создает нового пользователя в системе. "
     "После регистрации отправляется письмо на email для подтверждения.",
-    tags=reg_broker_tags
+    tags=[reg_broker_tags]
 )
 async def register_broker(
     data: RegisterBrokerRequest,
@@ -52,17 +50,14 @@ async def register_broker(
     response_model=Response, 
     summary="Приглашение пользователя",
     description="Создает личную ссылку брокера",
-    tags=reg_user_tags
+    tags=[reg_user_tags]
 )
 async def invite_user(
-    request: Request,
     auth_service: FromDishka[AuthService],
     authorization = Security(api_key_header)
 ):
-    await auth_service.check_broker_access_token(
-        request, authorization
-    )
-    return await auth_service.invite_user(request.state.user)
+    broker = await auth_service.check_broker_access_token()
+    return await auth_service.invite_user(broker)
 
 
 @router.post(
@@ -71,7 +66,7 @@ async def invite_user(
     summary="Регистрация пользователя",
     description="Создает нового пользователя в системе. "
     "После регистрации отправляется письмо на email для подтверждения.",
-    tags=reg_user_tags
+    tags=[reg_user_tags]
 )
 async def register_user(
     auth_service: FromDishka[AuthService],
@@ -86,7 +81,7 @@ async def register_user(
     response_model=TokenPairResponse, 
     description="Выдать access-token и "
     "refresh-token для входа в приложение",
-    tags=log_broker_user_tags
+    tags=[log_broker_user_tags]
 )
 async def login_user(
     auth_service: FromDishka[AuthService],
@@ -100,7 +95,7 @@ async def login_user(
     response_model=Response,
     summary="Выход из приложения",
     description="Требуется refresh-токен",
-    tags=log_broker_user_tags
+    tags=[log_broker_user_tags]
 )
 async def logout(
     auth_service: FromDishka[AuthService],
@@ -114,7 +109,7 @@ async def logout(
     response_model=TokenPairResponse, 
     summary="Обновить пару токенов",
     description="Для обновления требуется refresh-токен",
-    tags=log_broker_user_tags
+    tags=[log_broker_user_tags]
 )
 async def refresh_token(
     auth_service: FromDishka[AuthService],
@@ -129,7 +124,7 @@ async def refresh_token(
     summary="Сброс пароля",
     description="Если аккаунт активен"
     "на email отправляется письмо для смены пароля",
-    tags=log_broker_user_tags
+    tags=[log_broker_user_tags]
 )
 async def reset_password(
     auth_service: FromDishka[AuthService],
@@ -143,7 +138,7 @@ async def reset_password(
     response_model=Response, 
     summary="Сброс пароля",
     description="Подтвердить сброс пароля и создать новый",
-    tags=log_broker_user_tags
+    tags=[log_broker_user_tags]
 )
 async def reset_password_confirm(
     auth_service: FromDishka[AuthService],
@@ -157,7 +152,7 @@ async def reset_password_confirm(
     response_model=Response,
     summary="Подтвердить почту",
     description="После подтверждения почты аккаунт становится активным",
-    tags=reg_broker_user_tags
+    tags=[reg_broker_user_tags]
 )
 async def verify_email(
     auth_service: FromDishka[AuthService],
