@@ -80,3 +80,6 @@ class BaseUnitOfWork(AbstractUnitOfWork):
 
     async def close(self):
         return await self.session.close()
+    
+    async def merge(self, instance):
+        return await self.session.merge(instance)

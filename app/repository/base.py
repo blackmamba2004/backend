@@ -4,7 +4,10 @@ from uuid import UUID
 
 import logging
 
-from sqlalchemy import and_, or_, select, exists, inspect, Result, Executable, delete
+from sqlalchemy import (
+    and_, or_, select, exists, inspect, Result, Executable, delete, insert
+)
+from sqlalchemy.orm import Mapped
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.components.exceptions import NotFoundException
@@ -17,6 +20,14 @@ logger = logging.getLogger(__name__)
 ModelType = TypeVar("ModelType", bound=BaseModel)
 CreatingSchemaType = TypeVar("CreatingSchemaType", bound=BaseSchema)
 UpdatingSchemaType = TypeVar("UpdatingSchemaType", bound=BaseSchema)
+
+
+class NullColumn:
+    """
+    Класс для замены None при явной передаче значения null с API в DTO.
+    Предназначен для адекватной передачи установки значений None при обновлении записей в репозитории SQLAlchemy.
+    """
+    pass
 
 
 class BaseRepository(ABC, Generic[ModelType]):
@@ -89,6 +100,13 @@ class BaseRepository(ABC, Generic[ModelType]):
         if isinstance(id, UUID):
             id = str(id)
         stmt = delete(self._model_class).where(self._model_class.id == id)
+        await self._get_query_result(stmt)
+    
+    async def delete_by_filters(self, **filters) -> None:
+        """
+        Удалить запись из базы данных по фильтрам.
+        """
+        stmt = delete(self._model_class).where(**filters)
         await self._get_query_result(stmt)
     
     async def _adapt_fields(
@@ -199,3 +217,42 @@ class BaseRepository(ABC, Generic[ModelType]):
         )
 
         return (await self._session.execute(query)).scalar()
+    
+    async def _convert_model_to_dict(self, model: BaseModel) -> dict:
+        """
+        Преобразовать значения из модели в словарь.
+        Убрать все None значения, значения NullColumn заменить на None.
+
+        :param model: Модель для преобразования
+        :return: Словарь для использования в SQLAlchemy
+        """
+        self.validate_model(model)
+        columns = model.__table__.columns.keys()
+        result_dict = {}
+        for column in columns:
+            attr = getattr(model, column)
+            if isinstance(attr, NullColumn):
+                result_dict[column] = None
+            elif attr is not None:
+                result_dict[column] = attr
+
+        return result_dict
+
+    def validate_model(self, model: ModelType | Mapped[ModelType]) -> None:
+        """
+        Выполнить базовую валидацию модели перед сохранением.
+
+        :param model: Модель для валидации
+        """
+        if not isinstance(model, self._model_class):
+            raise ValueError(f"Invalid model type: expected {self._model_class.__name__}, got {type(model).__name__}")
+        
+    async def bulk_insert(self, models: Sequence[ModelType]) -> None:
+        """
+        Массовая вставка записей в базу данных.
+
+        :param models: Список моделей для вставки
+        """
+        values = [await self._convert_model_to_dict(model) for model in models]
+        stmt = insert(self._model_class).values(values)
+        await self._session.execute(stmt)

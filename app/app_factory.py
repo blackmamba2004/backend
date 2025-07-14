@@ -8,6 +8,7 @@ from app.config import AppConfig, load_app_config
 from app.container import create_container
 from app.components.exceptions import ApplicationException, application_exception_handler
 from app.routers import api_router
+from app.routers.tags import tags
 
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,8 @@ def create_app(config: AppConfig) -> FastAPI:
         debug=config.debug,
         exception_handlers={
             ApplicationException: application_exception_handler
-        }
+        },
+        openapi_tags=tags
     )
     app.add_middleware(
         CORSMiddleware,

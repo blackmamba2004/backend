@@ -3,7 +3,7 @@ from typing import NewType
 from enum import Enum, unique
 
 from sqlalchemy import Enum as PgEnum, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 
 from app.models import BaseModel
@@ -40,7 +40,26 @@ class User(BaseModel, TimestampMixin):
         nullable=False
     )
 
+    service_accounts = relationship(
+        "BrokerServiceAccount", 
+        back_populates="broker"
+    )
+
+    clients = relationship(
+        "User", 
+        back_populates="broker",
+        foreign_keys="[User.ref_id]"
+    )
+
+    broker = relationship(
+        "User",
+        back_populates="clients", 
+        remote_side="[User.id]"
+    )
+
+
 Admin = NewType('Admin', User)
 Broker = NewType('Broker', User)
+BrokerOrClient = NewType('BrokerOrClient', User)
 Client = NewType('Client', User)
 AnyUser = NewType('AnyUser', User)

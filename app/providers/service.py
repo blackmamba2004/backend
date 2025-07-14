@@ -3,8 +3,20 @@ from fastapi import Request
 
 from app.components import JWT, RedisCache
 from app.config import AppConfig, SMTPConfig
-from app.service import AuthService, EmailService, LinkerService, Service
-from app.unit_of_work import AuthUnitOfWork, ServiceUnitOfWork
+from app.service import (
+    AccountService, 
+    AuthService, 
+    EmailService, 
+    LinkerService, 
+    Service,
+    UserService
+)
+from app.unit_of_work import (
+    AccountUnitOfWork, 
+    AuthUnitOfWork, 
+    ServiceUnitOfWork,
+    UserUnitOfWork
+)
 
 
 class ServiceProvider(Provider):
@@ -28,9 +40,17 @@ class ServiceProvider(Provider):
             jwt,
             request
         )
+
+    @provide
+    def get_account_service(
+        self, account_unit_of_work: AccountUnitOfWork, redis_cache: RedisCache,
+    ) -> AccountService:
+        return AccountService(account_unit_of_work, redis_cache)
     
     @provide(scope=Scope.APP)
-    def get_email_service(self, smtp_config: SMTPConfig, app_config: AppConfig) -> EmailService:
+    def get_email_service(
+        self, smtp_config: SMTPConfig, app_config: AppConfig
+    ) -> EmailService:
         return EmailService(smtp_config, app_config.project_name)
     
     @provide(scope=Scope.APP)
@@ -44,3 +64,9 @@ class ServiceProvider(Provider):
     @provide
     async def get_request(self) -> Request:
         return Request()
+    
+    @provide
+    def get_user_service(
+        self, unit_of_work: UserUnitOfWork,
+    ) -> UserService:
+        return UserService(unit_of_work)

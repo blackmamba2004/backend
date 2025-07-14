@@ -1,4 +1,5 @@
 from uuid import UUID
+from logging import getLogger
 
 from dishka.integrations.fastapi import FromDishka, DishkaRoute
 from fastapi import APIRouter, Security
@@ -6,8 +7,10 @@ from fastapi import APIRouter, Security
 from app.models.user import Admin, AnyUser
 from app.routers.auth import api_key_header
 from app.routers.tags import (
-    serv_admin_tags,
-    serv_common_tags
+    serv,
+    admin, 
+    broker, 
+    client
 )
 from app.schemas.requests import (
     CreateServiceRequest,
@@ -18,8 +21,6 @@ from app.service import Service
 
 router = APIRouter(route_class=DishkaRoute)
 
-from logging import getLogger
-
 logger = getLogger(__name__)
 
 
@@ -28,7 +29,7 @@ logger = getLogger(__name__)
     response_model=GetServiceResponse,
     summary="Создает новый сервис",
     description="Создает новый сервис",
-    tags=[serv_admin_tags],
+    tags=[serv, admin],
 )
 async def create_service(
     data: CreateServiceRequest,
@@ -44,7 +45,7 @@ async def create_service(
     response_model=list[GetServiceResponse],
     summary="Получает список сервисов",
     description="Получает список сервисов",
-    tags=[serv_common_tags],
+    tags=[serv, admin, broker, client],
 )
 async def get_services(
     _: FromDishka[AnyUser],
@@ -59,7 +60,7 @@ async def get_services(
     response_model=GetServiceResponse,
     summary="Получает один сервис",
     description="Получает сервис из id в пути запроса",
-    tags=[serv_admin_tags],
+    tags=[serv, admin],
 )
 async def get_service(
     service_id: UUID,
@@ -75,7 +76,7 @@ async def get_service(
     response_model=GetServiceResponse,
     summary="Изменяет один сервис",
     description="Изменяет один сервис",
-    tags=[serv_admin_tags],
+    tags=[serv, admin],
 )
 async def update_service(
     service_id: UUID,
@@ -92,9 +93,9 @@ async def update_service(
     response_model=Response,
     summary="Удаляет один сервис",
     description="Удаляет один сервис",
-    tags=[serv_admin_tags],
+    tags=[serv, admin],
 )
-async def update_service(
+async def delete_service(
     service_id: UUID,
     _: FromDishka[Admin],
     service: FromDishka[Service],

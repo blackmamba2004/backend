@@ -60,41 +60,47 @@ class AuthService:
         self._request = request
         
     async def register_broker(self, body: RegisterBrokerDTO):
-        return await self.register(body, role=UserRole.BROKER)
+        async with self._uow as uow:
+            response = await self.register(body, uow, role=UserRole.BROKER)
+            await uow.commit()
+        return response 
 
     async def register_user(self, body: RegisterUserDTO):
         payload = await self._verify_token_with_exceptions(
             body.invite_token, TokenType.INVITE.value
         )
 
+        broker_id = payload["sub"]
+
         async with self._uow as uow:
-            user = await uow.user_repository.find_by_id(payload["sub"])
+            user = await uow.user_repository.find_by_id(broker_id)
 
             if not user:
                 raise TokenOwnerNotFoundException(
                     message="Referal user doesn't exist"
                 )
 
-        return await self.register(body, ref_id=payload["sub"])
-    
-    async def register(self, body, **extra_model_fields):
+            response = await self.register(body, uow, ref_id=broker_id)
+
+            await uow.commit()
+        
+        return response
+
+    async def register(self, body, uow: AuthUnitOfWork, **extra_model_fields):
         """
         :param user_role: передаем UserRole.BROKER | UserRole.USER
         """
-        async with self._uow as uow:
-            user = await uow.user_repository.find_one(
-                email=body.email
+        user = await uow.user_repository.find_one(
+            email=body.email
+        )
+
+        if user and user.is_active:
+            raise EmailException(message="This email is taken")
+        
+        elif not user:
+            user = await uow.user_repository.create(
+                body, **extra_model_fields
             )
-
-            if user and user.is_active:
-                raise EmailException(message="This email is taken")
-
-            elif not user:
-                user = await uow.user_repository.create(
-                    body, **extra_model_fields
-                )
-
-            await uow.commit()
 
         await self._send_email_with_token(
             user.id,
@@ -157,7 +163,7 @@ class AuthService:
         self, user_roles: tuple[UserRole]
     ) -> User:
         """
-        :param user_role: передаем [UserRole.BROKER] | [UserRole.USER] | [UserRole.ADMIN]
+        :param user_role: передаем (UserRole.BROKER,) | (UserRole.USER,) | (UserRole.ADMIN,)
         """
 
         auth_header = self._request.headers.get("Authorization")
@@ -185,6 +191,9 @@ class AuthService:
     async def check_broker_access_token(self) -> User:
         return await self.check_access_token((UserRole.BROKER,))
 
+    async def check_broker_or_client_access_token(self) -> User:
+        return await self.check_access_token((UserRole.BROKER, UserRole.USER))
+    
     async def check_client_access_token(self) -> User:
         return await self.check_access_token((UserRole.USER,))
     

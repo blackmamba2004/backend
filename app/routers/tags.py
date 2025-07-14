@@ -1,18 +1,19 @@
-broker = "Брокер"
 admin = "Админ"
-user = "Клиент"
+broker = "Брокер"
+client = "Клиент"
 
 auth = "Авторизация"
 reg = "Регистрация"
 serv = "Сервисы"
+acc = "Сервисные аккаунты"
 
-log_broker_tags = f"{auth} | {broker}"
-log_broker_user_tags = f"{auth} | {user} / {broker} / {admin}"
-log_user_tags = f"{auth} | {user}"
 
-reg_broker_tags = f"{reg} | {broker}"
-reg_broker_user_tags = f"{reg} | {user} / {broker}"
-reg_user_tags = f"{reg} | {user}"
-
-serv_admin_tags = f"{serv} | {admin}"
-serv_common_tags = f"{serv} | {admin} / {broker} / {user}"
+tags = [
+    {"name": f"{auth}", "description": "Аутентификация и логин"},
+    {"name": f"{reg}", "description": "Регистрация пользователей"},
+    {"name": f"{acc}", "description": "CRUD-операции с аккаунтами для сервисов"},
+    {"name": f"{serv}", "description": "CRUD-операции с сервисами"},
+    {"name": f"{admin}", "description": "Ресурсы админа"},
+    {"name": f"{broker}", "description": "Ресурсы брокера"},
+    {"name": f"{client}", "description": "Ресурсы клиента брокера"},
+]
